@@ -4,4 +4,3 @@ anthropic>=0.34.0
 google-genai>=1.0.0
 python-dotenv>=1.0.0
 Pillow>=10.0.0
-streamlit-local-storage>=0.0.7

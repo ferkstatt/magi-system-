@@ -9,10 +9,8 @@ import io
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-import json
 import streamlit as st
 from dotenv import load_dotenv
-from streamlit_local_storage import LocalStorage
 
 load_dotenv()
 
@@ -462,7 +460,9 @@ def judge_html(body: str) -> str:
 
 # ─── セッション状態 ───────────────────────────────────────────────────────────
 
-_ls = LocalStorage()
+@st.cache_resource
+def _history_store():
+    return {"data": []}
 
 if "results" not in st.session_state:
     st.session_state.results = {}
@@ -471,11 +471,7 @@ if "judge" not in st.session_state:
 if "last_question" not in st.session_state:
     st.session_state.last_question = ""
 if "history" not in st.session_state:
-    _saved = _ls.getItem("magi_history")
-    try:
-        st.session_state.history = json.loads(_saved) if _saved else []
-    except Exception:
-        st.session_state.history = []
+    st.session_state.history = list(_history_store()["data"])
 
 
 # ─── ヘッダー ────────────────────────────────────────────────────────────────
@@ -555,7 +551,7 @@ if execute and question.strip():
             "judge": verdict,
         })
         st.session_state.history = st.session_state.history[:10]
-        _ls.setItem("magi_history", json.dumps(st.session_state.history, ensure_ascii=False))
+        _history_store()["data"] = list(st.session_state.history)
 
 
 # ─── 結果表示 ────────────────────────────────────────────────────────────────
@@ -574,7 +570,7 @@ if st.session_state.results:
 if len(st.session_state.history) > 1:
     st.markdown("---")
     st.markdown('<p style="font-family:Orbitron,sans-serif;font-size:0.7rem;color:#1a6644;letter-spacing:0.25em;">// QUERY HISTORY</p>', unsafe_allow_html=True)
-    for i, h in enumerate(st.session_state.history[1:], 1):
+    for i, h in enumerate(st.session_state.history[1:]):
         q_short = h["question"][:60] + "…" if len(h["question"]) > 60 else h["question"]
         with st.expander(f'[{h["time"]}]  {q_short}'):
             cols = st.columns(3, gap="small")
