@@ -223,8 +223,8 @@ p, div:not(.stFileUploader div), span:not(.stFileUploader span), li {
     padding: 14px 16px;
     min-height: 140px;
     font-size: 0.83rem;
-    line-height: 1.75;
-    white-space: pre-wrap;
+    line-height: 1.65;
+    white-space: normal;
     word-break: break-word;
 }
 
@@ -282,9 +282,9 @@ p, div:not(.stFileUploader div), span:not(.stFileUploader span), li {
 .judge-body {
     padding: 16px 18px;
     font-size: 0.86rem;
-    line-height: 1.8;
+    line-height: 1.65;
     color: #ffe080 !important;
-    white-space: pre-wrap;
+    white-space: normal;
     word-break: break-word;
 }
 
@@ -392,23 +392,21 @@ def judge_responses(question: str, responses: dict[str, str], has_image: bool) -
     client = anthropic.Anthropic(api_key=k)
     sections = "\n\n".join(f"=== {name} ===\n{text}" for name, text in responses.items())
     image_note = "（質問には画像も添付されていました）" if has_image else ""
-    prompt = f"""あなたは公平なAI評価者です。以下の質問{image_note}に対して3つのAIが回答しました。
-各回答を評価し、最も優れた回答を選んでください。
+    prompt = f"""あなたは公平なAI評価者です。質問{image_note}に対する3つのAIの回答を評価してください。
 
-【質問】
-{question}
+【質問】{question}
 
 【各AIの回答】
 {sections}
 
-以下の観点で各回答を100点満点で採点し、理由を簡潔に述べてください：
-1. 正確性（情報は正しいか）
-2. 完全性（質問に十分答えているか）
-3. 明確さ（わかりやすいか）
-4. 実用性（実際に役立つか）
+以下の形式で簡潔に出力してください：
 
-採点後、「最優秀回答: [AI名] ([点数]点)」の形式で最終判定を下し、
-その回答が優れている理由を2〜3文で説明してください。"""
+■ ChatGPT: 正確性XX点 / 完全性XX点 / 明確さXX点 / 実用性XX点 → 合計XX点
+■ Gemini:  正確性XX点 / 完全性XX点 / 明確さXX点 / 実用性XX点 → 合計XX点
+■ Claude:  正確性XX点 / 完全性XX点 / 明確さXX点 / 実用性XX点 → 合計XX点
+
+◆ 最優秀回答: [AI名]（XX点）
+理由: 2文以内で説明。"""
     res = client.messages.create(
         model="claude-sonnet-4-6",
         max_tokens=2048,
@@ -428,8 +426,15 @@ AI_CONFIG = [
 
 # ─── HTML レンダラー ──────────────────────────────────────────────────────────
 
-def panel_html(cls: str, computer: str, ai_name: str, body: str) -> str:
+def _fmt(body: str) -> str:
     esc = html_lib.escape(body)
+    # 連続改行を段落区切り、単独改行を<br>に変換
+    esc = esc.replace('\r\n', '\n').replace('\r', '\n')
+    esc = esc.replace('\n\n', '</p><p>').replace('\n', '<br>')
+    return f"<p>{esc}</p>"
+
+
+def panel_html(cls: str, computer: str, ai_name: str, body: str) -> str:
     return f"""
 <div class="magi-panel p-{cls}">
   <div class="panel-topbar">
@@ -438,19 +443,18 @@ def panel_html(cls: str, computer: str, ai_name: str, body: str) -> str:
     <span class="panel-ai">/ {ai_name}</span>
     <span class="panel-tag">ONLINE</span>
   </div>
-  <div class="panel-body">{esc}</div>
+  <div class="panel-body">{_fmt(body)}</div>
 </div>"""
 
 
 def judge_html(body: str) -> str:
-    esc = html_lib.escape(body)
     return f"""
 <div class="magi-judge">
   <div class="judge-topbar">
     <span class="judge-led"></span>
     <span class="judge-label">◈ &nbsp;JUDGMENT SYSTEM — EVALUATION COMPLETE</span>
   </div>
-  <div class="judge-body">{esc}</div>
+  <div class="judge-body">{_fmt(body)}</div>
 </div>"""
 
 
@@ -460,6 +464,10 @@ if "results" not in st.session_state:
     st.session_state.results = {}
 if "judge" not in st.session_state:
     st.session_state.judge = ""
+if "history" not in st.session_state:
+    st.session_state.history = []
+if "last_question" not in st.session_state:
+    st.session_state.last_question = ""
 
 
 # ─── ヘッダー ────────────────────────────────────────────────────────────────
@@ -530,6 +538,16 @@ if execute and question.strip():
 
         st.session_state.results = responses
         st.session_state.judge = verdict
+        st.session_state.last_question = question
+        # 履歴に追加（最大10件）
+        import datetime
+        st.session_state.history.insert(0, {
+            "time": datetime.datetime.now().strftime("%H:%M"),
+            "question": question,
+            "results": dict(responses),
+            "judge": verdict,
+        })
+        st.session_state.history = st.session_state.history[:10]
 
 
 # ─── 結果表示 ────────────────────────────────────────────────────────────────
@@ -542,3 +560,18 @@ if st.session_state.results:
 
     if st.session_state.judge:
         st.markdown(judge_html(st.session_state.judge), unsafe_allow_html=True)
+
+# ─── 履歴 ────────────────────────────────────────────────────────────────────
+
+if len(st.session_state.history) > 1:
+    st.markdown("---")
+    st.markdown('<p style="font-family:Orbitron,sans-serif;font-size:0.7rem;color:#1a6644;letter-spacing:0.25em;">// QUERY HISTORY</p>', unsafe_allow_html=True)
+    for i, h in enumerate(st.session_state.history[1:], 1):
+        q_short = h["question"][:60] + "…" if len(h["question"]) > 60 else h["question"]
+        with st.expander(f'[{h["time"]}]  {q_short}'):
+            cols = st.columns(3, gap="small")
+            for col, (computer, ai_name, cls, _) in zip(cols, AI_CONFIG):
+                body = h["results"].get(ai_name, "—")
+                col.markdown(panel_html(cls, computer, ai_name, body), unsafe_allow_html=True)
+            if h["judge"]:
+                st.markdown(judge_html(h["judge"]), unsafe_allow_html=True)
