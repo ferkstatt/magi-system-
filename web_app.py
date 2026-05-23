@@ -358,7 +358,7 @@ def ask_gemini(question: str, image_bytes: bytes | None, image_mime: str | None)
         contents = [question, img]
     else:
         contents = question
-    res = client.models.generate_content(model="gemini-1.5-flash", contents=contents)
+    res = client.models.generate_content(model="gemini-2.0-flash-lite", contents=contents)
     return res.text
 
 
