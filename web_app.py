@@ -399,14 +399,18 @@ def judge_responses(question: str, responses: dict[str, str], has_image: bool) -
 【各AIの回答】
 {sections}
 
-以下の形式で簡潔に出力してください：
+以下の形式で出力してください：
 
 ■ ChatGPT: 正確性XX点 / 完全性XX点 / 明確さXX点 / 実用性XX点 → 合計XX点
 ■ Gemini:  正確性XX点 / 完全性XX点 / 明確さXX点 / 実用性XX点 → 合計XX点
 ■ Claude:  正確性XX点 / 完全性XX点 / 明確さXX点 / 実用性XX点 → 合計XX点
 
 ◆ 最優秀回答: [AI名]（XX点）
-理由: 2文以内で説明。"""
+理由: 2文以内で説明。
+
+━━━━━━━━━━━━━━━━━━
+◈ 統合結論
+3つの回答の優れた点を統合した、最も完全な回答を3〜5文で導き出してください。"""
     res = client.messages.create(
         model="claude-sonnet-4-6",
         max_tokens=2048,
