@@ -135,10 +135,20 @@ p, div:not(.stFileUploader div), span:not(.stFileUploader span), li {
 .input-section {
     background: rgba(0, 12, 28, 0.8);
     border: 1px solid rgba(0,255,159,0.12);
-    border-radius: 3px;
-    padding: 18px 20px 14px;
-    margin-bottom: 14px;
+    border-bottom: none;
+    border-radius: 3px 3px 0 0;
+    padding: 18px 20px 10px;
+    margin-bottom: 0;
     position: relative;
+    animation: border-pulse 3s ease-in-out infinite;
+}
+.eq-section {
+    border: 1px solid rgba(0,255,159,0.12);
+    border-top: none;
+    border-radius: 0 0 3px 3px;
+    margin-bottom: 14px;
+    overflow: hidden;
+    background: rgba(0,6,16,0.95);
     animation: border-pulse 3s ease-in-out infinite;
 }
 .input-section::before {
@@ -543,56 +553,68 @@ with col_img:
 
 st.markdown('</div>', unsafe_allow_html=True)
 
-# 波形エフェクト
+# イコライザーエフェクト（QUERY TERMINAL枠と一体化）
 import streamlit.components.v1 as components
+st.markdown('<div class="eq-section">', unsafe_allow_html=True)
 components.html("""
-<canvas id="waveCanvas" style="width:100%;height:48px;display:block;background:transparent;"></canvas>
+<style>* { margin:0; padding:0; box-sizing:border-box; }</style>
+<canvas id="eq" style="width:100%;height:56px;display:block;"></canvas>
 <script>
-const canvas = document.getElementById('waveCanvas');
-const ctx = canvas.getContext('2d');
-canvas.width = canvas.offsetWidth * window.devicePixelRatio || 1200;
-canvas.height = 48 * (window.devicePixelRatio || 1);
-ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+const cvs = document.getElementById('eq');
+const ctx = cvs.getContext('2d');
+const DPR = window.devicePixelRatio || 1;
+const W = window.innerWidth || 800, H = 56;
+cvs.width = W * DPR; cvs.height = H * DPR;
+ctx.scale(DPR, DPR);
 
-const W = canvas.offsetWidth || 1200, H = 48;
-let t = 0, amp = 6, targetAmp = 6;
+const N = 48;
+const vals   = Array(N).fill(0).map(() => Math.random() * 0.15 + 0.05);
+const targets = Array(N).fill(0).map(() => Math.random() * 0.15 + 0.05);
+let typing = false, typingTimer = null;
 
-// 親フレームのテキストエリア入力を監視
-window.addEventListener('message', e => {
-    if (e.data === 'typing') { targetAmp = 18; setTimeout(()=>{ targetAmp = 6; }, 400); }
-});
-
+// 親フレームのテキストエリアを監視
 try {
     const ta = window.parent.document.querySelector('textarea');
-    if (ta) ta.addEventListener('input', () => window.dispatchEvent(new Event('typing_local')));
-    window.addEventListener('typing_local', () => { targetAmp = 18; setTimeout(()=>{ targetAmp = 6; }, 400); });
+    if (ta) {
+        ta.addEventListener('input', () => {
+            typing = true;
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(() => { typing = false; }, 600);
+        });
+    }
 } catch(e) {}
+
+function tick() {
+    vals.forEach((v, i) => {
+        if (Math.random() < (typing ? 0.4 : 0.08)) {
+            const lo = typing ? 0.25 : 0.04;
+            const hi = typing ? 1.00 : 0.22;
+            targets[i] = Math.random() * (hi - lo) + lo;
+        }
+        vals[i] += (targets[i] - vals[i]) * (typing ? 0.35 : 0.12);
+    });
+}
 
 function draw() {
     ctx.clearRect(0, 0, W, H);
-    amp += (targetAmp - amp) * 0.15;
-    const waves = [
-        { color: 'rgba(0,255,159,0.55)', freq: 0.018, speed: 0.04, phase: 0 },
-        { color: 'rgba(0,204,255,0.30)', freq: 0.025, speed: 0.06, phase: 2.1 },
-        { color: 'rgba(0,255,159,0.18)', freq: 0.012, speed: 0.03, phase: 4.2 },
-    ];
-    waves.forEach(w => {
-        ctx.beginPath();
-        ctx.strokeStyle = w.color;
-        ctx.lineWidth = 1.2;
-        for (let x = 0; x <= W; x++) {
-            const y = H/2 + Math.sin(x * w.freq + t * w.speed + w.phase) * amp
-                         + Math.sin(x * w.freq * 1.7 + t * w.speed * 1.3) * amp * 0.4;
-            x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-        }
-        ctx.stroke();
+    const bw = W / N;
+    vals.forEach((v, i) => {
+        const bh = v * H;
+        const x  = i * bw;
+        const g  = ctx.createLinearGradient(0, H - bh, 0, H);
+        g.addColorStop(0,   typing ? 'rgba(0,255,159,0.9)' : 'rgba(0,255,159,0.5)');
+        g.addColorStop(0.6, typing ? 'rgba(0,204,120,0.6)' : 'rgba(0,180,90,0.3)');
+        g.addColorStop(1,   'rgba(0,80,40,0.1)');
+        ctx.fillStyle = g;
+        ctx.fillRect(x + 1, H - bh, bw - 2, bh);
     });
-    t++;
+    tick();
     requestAnimationFrame(draw);
 }
 draw();
 </script>
-""", height=52)
+""", height=60)
+st.markdown('</div>', unsafe_allow_html=True)
 
 _, btn_col, _ = st.columns([1.5, 1, 1.5])
 with btn_col:
