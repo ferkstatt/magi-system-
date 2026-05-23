@@ -55,10 +55,12 @@ CYBER_CSS = """
 p, div:not(.stFileUploader div), span:not(.stFileUploader span), li {
     font-family: 'Share Tech Mono', 'Hiragino Sans', 'Yu Gothic', 'Meiryo', monospace !important;
 }
-/* Material Icons を保護（expanderアイコン等） */
-[data-testid="stExpanderToggleIcon"] * ,
-.material-icons, .material-symbols-rounded {
-    font-family: 'Material Icons', 'Material Symbols Rounded' !important;
+/* Material Symbols を保護（expanderアイコン等） */
+[data-testid="stExpander"] summary span,
+[data-testid="stExpanderToggleIcon"],
+[data-testid="stExpanderToggleIcon"] span {
+    font-family: 'Material Symbols Rounded', 'Material Icons' !important;
+    font-size: 1.2rem !important;
 }
 
 /* ═══ ヘッダー ═══ */
@@ -540,6 +542,57 @@ with col_img:
     )
 
 st.markdown('</div>', unsafe_allow_html=True)
+
+# 波形エフェクト
+import streamlit.components.v1 as components
+components.html("""
+<canvas id="waveCanvas" style="width:100%;height:48px;display:block;background:transparent;"></canvas>
+<script>
+const canvas = document.getElementById('waveCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = canvas.offsetWidth * window.devicePixelRatio || 1200;
+canvas.height = 48 * (window.devicePixelRatio || 1);
+ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+
+const W = canvas.offsetWidth || 1200, H = 48;
+let t = 0, amp = 6, targetAmp = 6;
+
+// 親フレームのテキストエリア入力を監視
+window.addEventListener('message', e => {
+    if (e.data === 'typing') { targetAmp = 18; setTimeout(()=>{ targetAmp = 6; }, 400); }
+});
+
+try {
+    const ta = window.parent.document.querySelector('textarea');
+    if (ta) ta.addEventListener('input', () => window.dispatchEvent(new Event('typing_local')));
+    window.addEventListener('typing_local', () => { targetAmp = 18; setTimeout(()=>{ targetAmp = 6; }, 400); });
+} catch(e) {}
+
+function draw() {
+    ctx.clearRect(0, 0, W, H);
+    amp += (targetAmp - amp) * 0.15;
+    const waves = [
+        { color: 'rgba(0,255,159,0.55)', freq: 0.018, speed: 0.04, phase: 0 },
+        { color: 'rgba(0,204,255,0.30)', freq: 0.025, speed: 0.06, phase: 2.1 },
+        { color: 'rgba(0,255,159,0.18)', freq: 0.012, speed: 0.03, phase: 4.2 },
+    ];
+    waves.forEach(w => {
+        ctx.beginPath();
+        ctx.strokeStyle = w.color;
+        ctx.lineWidth = 1.2;
+        for (let x = 0; x <= W; x++) {
+            const y = H/2 + Math.sin(x * w.freq + t * w.speed + w.phase) * amp
+                         + Math.sin(x * w.freq * 1.7 + t * w.speed * 1.3) * amp * 0.4;
+            x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+    });
+    t++;
+    requestAnimationFrame(draw);
+}
+draw();
+</script>
+""", height=52)
 
 _, btn_col, _ = st.columns([1.5, 1, 1.5])
 with btn_col:
