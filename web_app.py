@@ -130,6 +130,11 @@ p, div:not(.stFileUploader div), span:not(.stFileUploader span), li {
     0%, 100% { border-color: rgba(0,255,159,0.12); }
     50%       { border-color: rgba(0,255,159,0.4); }
 }
+@keyframes ta-bg-rise {
+    0%   { background-position: 50% 100%; }
+    50%  { background-position: 50% 10%; }
+    100% { background-position: 50% 100%; }
+}
 
 /* ═══ 入力セクション ═══ */
 .input-section {
@@ -172,7 +177,15 @@ p, div:not(.stFileUploader div), span:not(.stFileUploader span), li {
 
 /* textarea */
 .stTextArea > div > div > textarea {
-    background: rgba(0, 6, 16, 0.95) !important;
+    background: linear-gradient(
+        to top,
+        rgba(0,255,159,0.13) 0%,
+        rgba(0,255,159,0.05) 25%,
+        rgba(0,255,159,0.01) 50%,
+        transparent 70%
+    ) !important;
+    background-size: 100% 250% !important;
+    animation: ta-bg-rise 3s ease-in-out infinite !important;
     border: 1px solid rgba(0,255,159,0.2) !important;
     color: #7affd4 !important;
     font-size: 0.95rem !important;
@@ -184,6 +197,7 @@ p, div:not(.stFileUploader div), span:not(.stFileUploader span), li {
     border-color: rgba(0,255,159,0.55) !important;
     box-shadow: 0 0 14px rgba(0,255,159,0.1) !important;
     outline: none !important;
+    animation: ta-bg-rise 1.5s ease-in-out infinite !important;
 }
 .stTextArea label {
     font-size: 0.68rem !important;
