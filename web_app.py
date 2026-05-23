@@ -9,8 +9,10 @@ import io
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+import json
 import streamlit as st
 from dotenv import load_dotenv
+from streamlit_local_storage import LocalStorage
 
 load_dotenv()
 
@@ -460,14 +462,20 @@ def judge_html(body: str) -> str:
 
 # ─── セッション状態 ───────────────────────────────────────────────────────────
 
+_ls = LocalStorage()
+
 if "results" not in st.session_state:
     st.session_state.results = {}
 if "judge" not in st.session_state:
     st.session_state.judge = ""
-if "history" not in st.session_state:
-    st.session_state.history = []
 if "last_question" not in st.session_state:
     st.session_state.last_question = ""
+if "history" not in st.session_state:
+    _saved = _ls.getItem("magi_history")
+    try:
+        st.session_state.history = json.loads(_saved) if _saved else []
+    except Exception:
+        st.session_state.history = []
 
 
 # ─── ヘッダー ────────────────────────────────────────────────────────────────
@@ -539,7 +547,6 @@ if execute and question.strip():
         st.session_state.results = responses
         st.session_state.judge = verdict
         st.session_state.last_question = question
-        # 履歴に追加（最大10件）
         import datetime
         st.session_state.history.insert(0, {
             "time": datetime.datetime.now().strftime("%H:%M"),
@@ -548,6 +555,7 @@ if execute and question.strip():
             "judge": verdict,
         })
         st.session_state.history = st.session_state.history[:10]
+        _ls.setItem("magi_history", json.dumps(st.session_state.history, ensure_ascii=False))
 
 
 # ─── 結果表示 ────────────────────────────────────────────────────────────────
