@@ -55,6 +55,11 @@ CYBER_CSS = """
 p, div:not(.stFileUploader div), span:not(.stFileUploader span), li {
     font-family: 'Share Tech Mono', 'Hiragino Sans', 'Yu Gothic', 'Meiryo', monospace !important;
 }
+/* Material Icons を保護（expanderアイコン等） */
+[data-testid="stExpanderToggleIcon"] * ,
+.material-icons, .material-symbols-rounded {
+    font-family: 'Material Icons', 'Material Symbols Rounded' !important;
+}
 
 /* ═══ ヘッダー ═══ */
 .magi-header {
@@ -109,6 +114,21 @@ p, div:not(.stFileUploader div), span:not(.stFileUploader span), li {
     margin-top: 5px;
 }
 
+/* ═══ アニメーション定義 ═══ */
+@keyframes qt-cursor {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.15; }
+}
+@keyframes qt-scan {
+    0%   { text-shadow: 0 0 4px rgba(0,255,159,0.3); color: #1a6644; }
+    50%  { text-shadow: 0 0 12px rgba(0,255,159,0.9), 0 0 24px rgba(0,255,159,0.4); color: #00ff9f; }
+    100% { text-shadow: 0 0 4px rgba(0,255,159,0.3); color: #1a6644; }
+}
+@keyframes border-pulse {
+    0%, 100% { border-color: rgba(0,255,159,0.12); }
+    50%       { border-color: rgba(0,255,159,0.4); }
+}
+
 /* ═══ 入力セクション ═══ */
 .input-section {
     background: rgba(0, 12, 28, 0.8);
@@ -117,9 +137,10 @@ p, div:not(.stFileUploader div), span:not(.stFileUploader span), li {
     padding: 18px 20px 14px;
     margin-bottom: 14px;
     position: relative;
+    animation: border-pulse 3s ease-in-out infinite;
 }
 .input-section::before {
-    content: 'QUERY TERMINAL';
+    content: 'QUERY TERMINAL ▋';
     position: absolute;
     top: -9px; left: 16px;
     background: #010b14;
@@ -127,6 +148,14 @@ p, div:not(.stFileUploader div), span:not(.stFileUploader span), li {
     font-size: 0.62rem;
     letter-spacing: 0.2em;
     color: #1a6644 !important;
+    animation: qt-scan 2.5s ease-in-out infinite;
+}
+.input-section:focus-within::before {
+    content: 'QUERY TERMINAL ▋';
+    animation: qt-scan 1s ease-in-out infinite;
+}
+.input-section:focus-within {
+    animation: border-pulse 1s ease-in-out infinite;
 }
 
 /* textarea */
